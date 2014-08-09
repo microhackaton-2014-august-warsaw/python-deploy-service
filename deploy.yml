@@ -1,0 +1,43 @@
+---
+- hosts: localhost
+  vars:
+    - service_port: 8080
+    - service_dir: "/opt/services/{{ service_name }}"
+
+  tasks:
+    - name: Install Python service dependencies
+      apt: name={{ item }} state=installed
+      with_items:
+        - python
+        - python-pip
+        - supervisor
+
+    - name: We need virtualenv
+      pip: name=virtualenv
+
+    - name: Prepare service directory
+      file: path={{ service_dir }} state=directory
+
+    - name: Put service source to server
+      git: repo=https://github.com/microhackaton/{{ service_name }} dest={{ service_dir }}
+      notify:
+        - restart service
+
+    - name: Install requirements
+      pip: requirements={{ service_dir }}/requirements.txt virtualenv={{ service_dir }}/venv
+
+    - name: Get public IP
+      shell: 'curl http://169.254.169.254/latest/meta-data/public-ipv4'
+      register: service_ip
+
+    - name: Configure service supervisor
+      template: src=supervisor.conf.j2 dest=/etc/supervisor/conf.d/{{ service_name }}.conf
+      notify:
+        - restart service
+
+    - name: Make sure our service is running
+      command: sudo supervisorctl start {{ service_name }}
+
+  handlers:
+    - name: restart service
+      supervisorctl: name={{ service_name }} state=restarted
