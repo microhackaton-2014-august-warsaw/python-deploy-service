@@ -15,7 +15,7 @@ setup(
     license="ASL 2.0",
     install_requires=[
         'flask',
-        'fabtools',
+        'ansible',
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",
